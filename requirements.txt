@@ -1,0 +1,6 @@
+flask
+gunicorn
+pandas
+yfinance
+lxml
+openpyxl
