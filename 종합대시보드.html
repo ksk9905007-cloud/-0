@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 자산 종합 대시보드 (App)</title>
+    <!-- PWA & Mobile Meta -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#050a14">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Chart.js & Plugins -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="data_store.js"></script>
+    <style>
+        :root {
+            --bg-body: #050a14; --bg-card: #0c1425; --bg-accent: #1e293b;
+            --primary: #38bdf8; --secondary: #fbbf24;
+            --sidebar-w: 240px;
+            --text-main: #f8fafc; --text-muted: #94a3b8;
+            --border: #1e293b; --up: #f43f5e; --down: #22c55e;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Sidebar Navigation */
+        aside { width: var(--sidebar-w); background: #08101f; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 2rem 0; flex-shrink: 0; }
+        .side-header { padding: 0 1.5rem; margin-bottom: 2.5rem; }
+        .side-header h2 { font-size: 1.1rem; color: var(--primary); font-weight: 700; letter-spacing: -0.5px; line-height: 1.3; }
+        .nav-link { padding: 1rem 1.5rem; display: flex; align-items: center; gap: 0.8rem; cursor: pointer; color: var(--text-muted); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border-left: 4px solid transparent; text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+        .nav-link:hover { background: rgba(56, 189, 248, 0.05); color: var(--text-main); transform: translateX(4px); }
+        .nav-link:active { transform: scale(0.96) translateX(4px); opacity: 0.8; }
+        .nav-link.active { background: rgba(56, 189, 248, 0.1); color: var(--primary); border-left-color: var(--primary); }
+        .nav-icon { font-size: 1.2rem; }
+
+        .btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); transform: translateY(-1px); }
+        .btn:active { transform: scale(0.95); opacity: 0.8; }
+
+        .range-btn, .p-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .range-btn:active, .p-btn:active { transform: scale(0.92); }
+
+        /* Main Content area */
+        main { flex-grow: 1; overflow-y: auto; padding: 2rem; }
+        .container { max-width: 1600px; margin: 0 auto; position: relative; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Existing Styles Optimized */
+        .card { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 2rem; }
+        .card-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 1400px; }
+        thead th { padding: 0.8rem; text-align: center; font-size: 0.7rem; color: var(--text-muted); background: #0f172a; border-bottom: 1px solid var(--border); }
+        .th-group-main { font-size: 0.75rem; color: var(--text-main); background: #16213e; }
+        td { padding: 0.8rem 0.4rem; border-bottom: 1px solid #1e293b; font-size: 0.8rem; text-align: center; }
+        td:first-child, th:first-child { text-align: left; padding-left: 1.5rem; }
+        .asset-name { cursor: pointer; color: var(--primary); font-weight: 700; text-decoration: underline dotted; }
+        
+        /* MA Numerical Value Cell Style */
+        .ma-box { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 4px; font-size: 0.68rem; text-align: left; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05); }
+        .ma-item { display: flex; align-items: center; gap: 4px; color: var(--text-muted); }
+        .ma-item.active { color: var(--text-main); font-weight: 600; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .dot-up { background: var(--up); box-shadow: 0 0 6px var(--up); }
+        .dot-down { background: var(--down); box-shadow: 0 0 6px var(--down); }
+
+        .up { color: var(--up); font-weight: 700; } .down { color: var(--down); font-weight: 700; }
+        
+        /* Timeframe Group Styling */
+        .col-year { background: rgba(253, 224, 71, 0.15) !important; border-left: 2px solid #fde047 !important; border-right: 2px solid #fde047 !important; font-weight: 800; color: #fef08a; text-shadow: 0 0 5px rgba(253, 224, 71, 0.2); }
+        .sep-q { border-right: 2px solid rgba(56, 189, 248, 0.25) !important; }
+        .sep-m { border-right: 2px solid rgba(56, 189, 248, 0.25) !important; }
+        .bg-week { background: rgba(56, 189, 248, 0.03); }
+
+        .th-group-main th { border-bottom: 2px solid var(--border); }
+        
+        .analysis-box { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .heatmap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; padding: 1rem; }
+        .heat-cell { padding: 1.5rem 1rem; border-radius: 8px; text-align: center; font-size: 0.8rem; font-weight: 700; color: #fff; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
+        .heat-cell:hover { transform: scale(1.05); z-index: 10; border-color: var(--primary); }
+
+        /* Insight Item Styling */
+        .insight-item { background: rgba(255,255,255,0.02); padding: 1.2rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
+        .news-card:hover { background: rgba(56, 189, 248, 0.1) !important; border-color: var(--primary) !important; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
+        .modal-content { background: var(--bg-card); margin: 1% auto; padding: 1.5rem; width: 92%; max-width: 1100px; border-radius: 20px; border: 1px solid var(--border); max-height: 98vh; overflow-y: auto; position: relative; }
+        .chart-box { width: 100%; height: 480px; position: relative; margin: 1rem 0; background: #000; border-radius: 8px; padding: 1rem;}
+
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.2rem; margin-bottom: 2rem; }
+        .summary-card { padding: 1.2rem; border-radius: 12px; background: linear-gradient(145deg, #0c1425, #1e293b); border-left: 4px solid var(--primary); }
+
+        @media (max-width: 900px) {
+            aside { width: 70px; }
+            .side-header h2, .nav-text { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="side-header">
+            <h2>ASSET <br>TERMINAL</h2>
+            <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.5rem;">2026 ANALYTICS</div>
+        </div>
+        <div class="nav-link active" onclick="switchTab('dashboard')">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">종합 대시보드</span>
+        </div>
+        <div class="nav-link" onclick="switchTab('analysis')">
+            <span class="nav-icon">🔬</span>
+            <span class="nav-text">기술 분석 모드</span>
+        </div>
+        <div class="nav-link" onclick="switchTab('etc')">
+            <span class="nav-icon">🌐</span>
+            <span class="nav-text">기타 분석 모드</span>
+        </div>
+        
+        <div style="margin-top:auto; padding: 1.5rem;">
+            <div style="font-size: 0.7rem; color: var(--text-muted);" id="lastSyncSide">Last: --</div>
+        </div>
+    </aside>
+
+    <main>
+        <div id="assetModal" class="modal">
+            <div class="modal-content">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 id="mName" style="font-size: 1.4rem;">--</h2>
+                    <span style="font-size:2rem; cursor:pointer;" onclick="closeModal()">&times;</span>
+                </div>
+                <div style="display:flex; gap:0.5rem; margin-top:0.5rem;" id="rangeSelectors">
+                    <button class="nav-link" style="padding:0.4rem 0.8rem; font-size:0.7rem;" onclick="updateRange(90)">3M</button>
+                    <button class="nav-link" style="padding:0.4rem 0.8rem; font-size:0.7rem;" onclick="updateRange(365)">1Y</button>
+                    <button class="nav-link active" id="btnMax" style="padding:0.4rem 0.8rem; font-size:0.7rem;" onclick="updateRange(0)">MAX</button>
+                </div>
+                <div class="chart-box">
+                    <button style="position:absolute; top:10px; right:10px; z-index:10; font-size:0.7rem;" onclick="resetZoom()">Zoom Reset</button>
+                    <canvas id="mainChart"></canvas>
+                </div>
+                <p id="mNews" style="line-height: 1.7; font-size: 0.9rem; background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border-left: 4px solid var(--secondary);"></p>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- DASHBOARD TAB -->
+            <section id="dashboard" class="tab-content active">
+                <header>
+                    <div>
+                        <h1 style="font-size:1.6rem;">MARKET DASHBOARD</h1>
+                        <p style="font-size:0.8rem; color:var(--text-muted);">Real-time multi-timeframe asset performance console</p>
+                    </div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn" style="padding:0.5rem 1.2rem; border-radius:4px; font-weight:700; background:rgba(168, 85, 247, 0.2); border:1px solid #a855f7; color:#f8fafc;" onclick="showMonthlyReport()">📅 월간 레포트</button>
+                        <button class="btn" style="padding:0.5rem 1rem; border-radius:4px; font-weight:700;" onclick="exportExcel()">📤 EXCEL</button>
+                        <button class="btn" style="padding:0.5rem 1rem; border-radius:4px; font-weight:700; background:var(--primary); color:#000;" onclick="location.reload()">🔄 SYNC</button>
+                    </div>
+                </header>
+
+                <div class="summary-cards" id="topCards"></div>
+
+                <!-- NEW: TIME CONTROL BAR -->
+                <div class="card" style="margin-bottom: 2rem; background: #0c1425; border: 1px solid var(--primary);">
+                    <div style="padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
+                        <div style="display:flex; align-items:center; gap:1.2rem;">
+                            <div style="font-size:0.75rem; color:var(--primary); font-weight:700;">📊 VIEW MODE (보기 모드)</div>
+                            <div style="display:flex; background:rgba(255,255,255,0.05); border-radius:30px; padding:4px;">
+                                <button class="range-btn active" id="modeSingle" onclick="setMode('single')">연도별 분석</button>
+                                <button class="range-btn" id="modePeriod" onclick="setMode('period')">기간별 합산</button>
+                            </div>
+                        </div>
+                        
+                        <div id="singleControls" style="display:flex; align-items:center; gap:1rem;">
+                            <div style="font-size:0.75rem; color:var(--text-muted);">대상 연도:</div>
+                            <select id="yearSelect" class="form-select" onchange="updateView()">
+                                <option value="2026" selected>2026년</option>
+                                <option value="2025">2025년</option>
+                                <option value="2024">2024년</option>
+                                <option value="2023">2023년</option>
+                                <option value="2022">2022년</option>
+                                <option value="2021">2021년</option>
+                                <option value="2020">2020년</option>
+                            </select>
+                        </div>
+                        
+                        <div id="periodControls" style="display:none; align-items:center; gap:1rem;">
+                            <div style="font-size:0.75rem; color:var(--text-muted);">통계 기간:</div>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button class="p-btn active" onclick="setPeriod(1)">1Y</button>
+                                <button class="p-btn" onclick="setPeriod(2)">2Y</button>
+                                <button class="p-btn" onclick="setPeriod(3)">3Y</button>
+                                <button class="p-btn" onclick="setPeriod(5)">5Y</button>
+                            </div>
+                        </div>
+
+                        <div id="currentRangeInfo" style="font-size:0.75rem; font-weight:700; background:rgba(56, 189, 248, 0.1); padding:0.4rem 0.82rem; border-radius:4px; color:var(--primary);">
+                            Range: 2026-01-01 ~ 2026-12-31
+                        </div>
+                    </div>
+                </div>
+
+                <style>
+                    .range-btn { border:none; background:transparent; padding:0.4rem 1.2rem; border-radius:20px; font-size:0.7rem; font-weight:700; color:var(--text-muted); cursor:pointer; transition:0.2s; }
+                    .range-btn.active { background:var(--primary); color:#000; box-shadow: 0 0 10px var(--primary); }
+                    .p-btn { border:1px solid #1e293b; background:rgba(255,255,255,0.02); padding:0.3rem 0.8rem; border-radius:4px; font-size:0.7rem; color:var(--text-muted); cursor:pointer; }
+                    .p-btn.active { border-color:var(--primary); color:var(--primary); background:rgba(56, 189, 248, 0.05); }
+                    .form-select { background:#1e293b; color:#fff; border:1px solid #334155; padding:0.4rem 0.8rem; border-radius:6px; font-size:0.8rem; outline:none; }
+                </style>
+
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h2 style="font-size:1rem; display:flex; align-items:center; gap:0.6rem;">💎 COMMODITIES <small style="font-weight:400; font-size:0.75rem; opacity:0.6;">(원자재 시장 정밀 분석)</small></h2>
+                            </div>
+                            <span class="badge" style="background:#4ade80; color:#000;">LIVE FEED</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr class="th-group-main">
+                                        <th rowspan="2" style="width: 170px;">ASSET (자산명)</th>
+                                        <th rowspan="2" style="width: 140px;">MA STATUS <br><small>(20 / 60 / 120 / 308)</small></th>
+                                        <th rowspan="2" class="col-year">YEAR<br><small>연간</small></th>
+                                        <th rowspan="2" style="width: 80px; font-size: 0.65rem; color: var(--up); background: rgba(244, 63, 94, 0.05);">26년 고점<br>대비</th>
+                                        <th rowspan="2" style="width: 80px; font-size: 0.65rem; color: var(--down); background: rgba(34, 197, 94, 0.05);">26년 저점<br>대비</th>
+                                        <th colspan="4" class="sep-q">QUARTER (분기 성과)</th>
+                                        <th colspan="12" class="sep-m">MONTH (월간 성과)</th>
+                                        <th colspan="4" class="bg-week">WEEK (주간 성과)</th>
+                                        <th rowspan="2">LATEST<br><small>현재가</small></th>
+                                    </tr>
+                                    <tr class="th-sub">
+                                        <th id="h_q1">Q1</th><th id="h_q2">Q2</th><th id="h_q3">Q3</th><th class="sep-q" id="h_q4">Q4</th>
+                                        <th id="h_m1">1월</th><th id="h_m2">2월</th><th id="h_m3">3월</th><th id="h_m4">4월</th><th id="h_m5">5월</th><th id="h_m6">6월</th><th id="h_m7">7월</th><th id="h_m8">8월</th><th id="h_m9">9월</th><th id="h_m10">10월</th><th id="h_m11">11월</th><th class="sep-m" id="h_m12">12월</th>
+                                        <th class="bg-week" id="h_w1">1주<br><small>(3/9-3/16)</small></th><th class="bg-week" id="h_w2">2주<br><small>(3/16-3/23)</small></th><th class="bg-week" id="h_w3">3주<br><small>(3/23-3/30)</small></th><th class="bg-week" id="h_w4">4주<br><small>(3/30-4/5)</small></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h2 style="font-size:1rem; display:flex; align-items:center; gap:0.6rem;">📈 GLOBAL INDICES <small style="font-weight:400; font-size:0.75rem; opacity:0.6;">(글로벌 주요 지수 현황)</small></h2>
+                            </div>
+                            <span class="badge" style="background:#60a5fa; color:#000;">STABLE STATUS</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr class="th-group-main">
+                                        <th rowspan="2" style="width: 170px;">INDEX (지수명)</th>
+                                        <th rowspan="2" style="width: 140px;">MA STATUS <br><small>(20 / 60 / 120 / 308)</small></th>
+                                        <th rowspan="2" class="col-year">YEAR<br><small>연간</small></th>
+                                        <th rowspan="2" style="width: 80px; font-size: 0.65rem; color: var(--up); background: rgba(244, 63, 94, 0.05);">26년 고점<br>대비</th>
+                                        <th rowspan="2" style="width: 80px; font-size: 0.65rem; color: var(--down); background: rgba(34, 197, 94, 0.05);">26년 저점<br>대비</th>
+                                        <th colspan="4" class="sep-q">QUARTER (분기 성과)</th>
+                                        <th colspan="12" class="sep-m">MONTH (월간 성과)</th>
+                                        <th colspan="4" class="bg-week">WEEK (주간 성과)</th>
+                                        <th rowspan="2">LATEST<br><small>현재 지수</small></th>
+                                    </tr>
+                                    <tr class="th-sub">
+                                        <th id="ih_q1">Q1</th><th id="ih_q2">Q2</th><th id="ih_q3">Q3</th><th class="sep-q" id="ih_q4">Q4</th>
+                                        <th id="ih_m1">1월</th><th id="ih_m2">2월</th><th id="ih_m3">3월</th><th id="ih_m4">4월</th><th id="ih_m5">5월</th><th id="ih_m6">6월</th><th id="ih_m7">7월</th><th id="ih_m8">8월</th><th id="ih_m9">9월</th><th id="ih_m10">10월</th><th id="ih_m11">11월</th><th class="sep-m" id="ih_m12">12월</th>
+                                        <th class="bg-week" id="ih_w1">1주<br><small>(3/9-3/16)</small></th><th class="bg-week" id="ih_w2">2주<br><small>(3/16-3/23)</small></th><th class="bg-week" id="ih_w3">3주<br><small>(3/23-3/30)</small></th><th class="bg-week" id="ih_w4">4주<br><small>(3/30-4/5)</small></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="iTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ANALYSIS TAB -->
+            <section id="analysis" class="tab-content">
+                <div style="margin-bottom: 2rem;">
+                    <h1>TECHNICAL ANALYSIS MODE</h1>
+                    <p style="color:var(--text-muted);">Asset Performance Heatmap & Deep Insights</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header"><h2>📊 자산별 성과 히트맵 (클릭 시 상세 분석)</h2></div>
+                    <div class="heatmap-grid" id="heatmap"></div>
+                </div>
+
+                <div id="deepInsight" class="card" style="display:none; background: #08101f; border: 1px solid var(--primary); box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);">
+                    <div class="card-header" style="background: rgba(56, 189, 248, 0.1); border-bottom: 2px solid var(--primary);">
+                        <h2 id="insightTitle" style="color:var(--primary); font-size:1.2rem; font-weight:800; letter-spacing:-0.5px;">--</h2>
+                        <div id="newsList" style="display:flex; gap:0.6rem; flex-wrap:wrap;"></div>
+                    </div>
+                    <div style="padding: 1.5rem; display:grid; grid-template-columns: repeat(3, 1fr); gap:1.5rem;">
+                        <div class="insight-card" style="border-top: 4px solid var(--primary);">
+                            <h3 style="color:var(--primary); font-size:0.85rem; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">📊 수급 분석 <small>(Supply-Demand)</small></h3>
+                            <div id="insSupply" style="font-size:0.82rem; color:var(--text-main); line-height:1.7;"></div>
+                        </div>
+                        <div class="insight-card" style="border-top: 4px solid var(--secondary);">
+                            <h3 style="color:var(--secondary); font-size:0.85rem; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">🔢 정량 분석 <small>(Quantitative)</small></h3>
+                            <div id="insQuant" style="font-size:0.82rem; color:var(--text-main); line-height:1.7;"></div>
+                        </div>
+                        <div class="insight-card" style="border-top: 4px solid var(--up);">
+                            <h3 style="color:var(--up); font-size:0.85rem; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">💡 정성 분석 <small>(Qualitative)</small></h3>
+                            <div id="insQual" style="font-size:0.82rem; color:var(--text-main); line-height:1.7;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-box" style="margin-top:2rem;">
+                    <div class="card" style="border-top: 5px solid gold;">
+                        <div class="card-header"><h2 style="font-size:0.9rem;">🏆 TOP PERFORMANCE (연초대비)</h2></div>
+                        <div id="topWinner" style="padding: 2.22rem; text-align: center;"></div>
+                    </div>
+                    <div class="card" style="border-top: 5px solid var(--up);">
+                        <div class="card-header"><h2 style="font-size:0.9rem;">🚀 BULL SIGNALS (이평선 상단)</h2></div>
+                        <div id="goldenList" style="padding: 1.2rem; display:flex; flex-direction:column; gap:10px;"></div>
+                    </div>
+                    <div class="card" style="border-top: 5px solid var(--down);">
+                        <div class="card-header"><h2 style="font-size:0.9rem;">📉 BEAR SIGNALS (이평선 하단)</h2></div>
+                        <div id="bearList" style="padding: 1.2rem; display:flex; flex-direction:column; gap:10px;"></div>
+                    </div>
+                </div>
+            <!-- ETC ANALYSIS TAB -->
+            <section id="etc" class="tab-content">
+                <div style="margin-bottom: 2rem;">
+                    <h1>ETC ANALYSIS MODE</h1>
+                    <p style="color:var(--text-muted);">Watchlist for FX, Tech Giants & Alternative Assets</p>
+                </div>
+                
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem;">
+                    <div class="card">
+                        <div class="card-header"><h2>💱 외환 및 환율 (FX Watch)</h2></div>
+                        <div style="padding: 1.5rem;">
+                            <div style="margin-bottom:1.2rem; border-bottom:1px solid var(--border); padding-bottom:1rem;">
+                                <div style="font-weight:700; color:var(--primary);">달러/원 (USD/KRW)</div>
+                                <div style="font-size:0.85rem; color:var(--text-main); margin-top:0.4rem;">한미 금리차 및 무역 수지 영향으로 변동성 확대 구간. 1,350~1,450원 박스권 모니터링 필요.</div>
+                            </div>
+                            <div>
+                                <div style="font-weight:700; color:var(--secondary);">엔/원 (JPY/KRW)</div>
+                                <div style="font-size:0.85rem; color:var(--text-main); margin-top:0.4rem;">일본 BOJ의 금리 정책 전환 여부에 따른 엔화 강세 반전 가능성 상존. 저가 매수세 유입 중.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header"><h2>🚀 빅테크 성장주 (Tech Giants)</h2></div>
+                        <div style="padding: 1.5rem;">
+                            <div style="margin-bottom:1.2rem; border-bottom:1px solid var(--border); padding-bottom:1rem;">
+                                <div style="font-weight:700; color:#10b981;">엔비디아 (NVDA)</div>
+                                <div style="font-size:0.85rem; color:var(--text-main); margin-top:0.4rem;">AI 인프라 수요의 핵심. 실적 가이던스 상향 여부가 나스닥 전체 향방을 결정하는 키.</div>
+                            </div>
+                            <div>
+                                <div style="font-weight:700; color:#ef4444;">테슬라 (TSLA)</div>
+                                <div style="font-size:0.85rem; color:var(--text-main); margin-top:0.4rem;">전기차 수요 둔화 및 중국 시장 경쟁 심화로 인한 밸류에이션 재평가 국면 진행 중.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header"><h2>🌾 농산물 및 기타 (Alternatives)</h2></div>
+                        <div style="padding: 1.5rem;">
+                            <div style="margin-bottom:1.2rem; border-bottom:1px solid var(--border); padding-bottom:1rem;">
+                                <div style="font-weight:700; color:#f59e0b;">옥수수/대두 (Grain)</div>
+                                <div style="font-size:0.85rem; color:var(--text-main); margin-top:0.4rem;">이상 기후로 인한 작황 부진 가능성. 애그플레이션(Agflation) 위험 요소로 부각 가능.</div>
+                            </div>
+                            <div>
+                                <div style="font-weight:700; color:#84cc16;">탄소배출권 (Carbon)</div>
+                                <div style="font-size:0.85rem; color:var(--text-main); margin-top:0.4rem;">글로벌 환경 규제 강화에 따른 중장기적 우상향 자산. 에너지 전환 비용의 지표.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        let myChart = null;
+        let currentAsset = null;
+
+        function switchTab(id) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        let viewMode = 'single';
+        let viewYear = 2026;
+        let viewPeriod = 1;
+
+        function setMode(mode) {
+            viewMode = mode;
+            document.getElementById('modeSingle').classList.toggle('active', mode==='single');
+            document.getElementById('modePeriod').classList.toggle('active', mode==='period');
+            document.getElementById('singleControls').style.display = mode==='single' ? 'flex' : 'none';
+            document.getElementById('periodControls').style.display = mode==='period' ? 'flex' : 'none';
+            updateView();
+        }
+
+        function setPeriod(p) {
+            viewPeriod = p;
+            document.querySelectorAll('.p-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', [1,2,3,5][idx] === p);
+            });
+            updateView();
+        }
+
+        function updateView() {
+            viewYear = parseInt(document.getElementById('yearSelect').value);
+            render();
+        }
+
+        function getPriceAt(chart, targetDate) {
+            const idx = chart.dates.findIndex(d => d >= targetDate);
+            if(idx === -1) return chart.prices[chart.prices.length - 1];
+            return chart.prices[idx];
+        }
+
+        function getRangeStats(chart, start, end) {
+            const startIndex = chart.dates.findIndex(d => d >= start);
+            let endIndex = -1;
+            for(let i = chart.dates.length - 1; i >= 0; i--) {
+                if(chart.dates[i] <= end) {
+                    endIndex = i;
+                    break;
+                }
+            }
+            if(startIndex === -1 || endIndex === -1 || startIndex > endIndex) return {ytd:0, high_off:0, low_off:0};
+            
+            const startPrice = chart.prices[startIndex];
+            const endPrice = chart.prices[endIndex];
+            const rangePrices = chart.prices.slice(startIndex, endIndex + 1);
+            const high = Math.max(...rangePrices);
+            const low = Math.min(...rangePrices);
+            
+            return {
+                ytd: ((endPrice - startPrice) / startPrice) * 100,
+                high_off: ((endPrice - high) / high) * 100,
+                low_off: ((endPrice - low) / low) * 100
+            };
+        }
+
+        const ff = v => {
+            const n = parseFloat(v);
+            if(isNaN(n) || n === 0) return '<span>-</span>';
+            return `<span class="${n>=0?'up':'down'}">${n>=0?'▲':'▼'}${Math.abs(n).toFixed(1)}%</span>`;
+        };
+
+        function render() {
+            if(typeof MARKET_STORE === 'undefined') return;
+
+            const data = MARKET_STORE.sort((a,b) => parseFloat(b.YTD) - parseFloat(a.YTD));
+            
+            // Define Time Range
+            let startDate, endDate, rangeLabel;
+            if(viewMode === 'single') {
+                startDate = `${viewYear}-01-01`;
+                endDate = `${viewYear}-12-31`;
+                rangeLabel = `기간: ${viewYear}년 연간`;
+            } else {
+                const nowYear = 2026;
+                startDate = `${nowYear - viewPeriod + 1}-01-01`;
+                endDate = `2026-12-31`;
+                rangeLabel = `기간: 최근 ${viewPeriod}개년 합산 (${startDate} ~ ${endDate})`;
+            }
+            document.getElementById('currentRangeInfo').innerText = rangeLabel;
+
+            const qTags = ['h_q1','h_q2','h_q3','h_q4','ih_q1','ih_q2','ih_q3','ih_q4'];
+            
+            if(viewMode === 'single') {
+                qTags.forEach((id,i) => { const el = document.getElementById(id); if(el) el.innerText = `Q${(i%4)+1}`; });
+                for(let i=1; i<=12; i++) {
+                    const h = document.getElementById(`h_m${i}`);
+                    const ih = document.getElementById(`ih_m${i}`);
+                    if(h) h.innerText = `${i}월`;
+                    if(ih) ih.innerText = `${i}월`;
+                }
+            } else {
+                qTags.forEach((id,i) => { const el = document.getElementById(id); if(el) el.innerText = `${2026 - (3-(i%4))}Y`; });
+                for(let i=1; i<=12; i++) {
+                    const h = document.getElementById(`h_m${i}`);
+                    const ih = document.getElementById(`ih_m${i}`);
+                    if(h) h.innerText = `M${i}`;
+                    if(ih) ih.innerText = `M${i}`;
+                }
+            }
+
+            const mData = data.filter(d => d.카테고리 === "Raw Materials");
+            const iData = data.filter(d => d.카테고리 === "Indices");
+
+            const populate = (items, targetId) => {
+                const body = document.getElementById(targetId);
+                body.innerHTML = "";
+                items.forEach(item => {
+                    if(!item.chart) return;
+                    const stats = getRangeStats(item.chart, startDate, endDate);
+                    
+                    // Quarterly Breakdown
+                    const m1 = getRangeStats(item.chart, `${viewYear}-01-01`, `${viewYear}-03-31`).ytd;
+                    const m2 = getRangeStats(item.chart, `${viewYear}-04-01`, `${viewYear}-06-30`).ytd;
+                    const m3 = getRangeStats(item.chart, `${viewYear}-07-01`, `${viewYear}-09-30`).ytd;
+                    const m4 = getRangeStats(item.chart, `${viewYear}-10-01`, `${viewYear}-12-31`).ytd;
+
+                    // Monthly Breakdown (Full 12 months)
+                    const monthlyCells = [];
+                    for(let m=1; m<=12; m++) {
+                        const mStr = m.toString().padStart(2, '0');
+                        const nextMStr = (m+1).toString().padStart(2, '0');
+                        const start = `${viewYear}-${mStr}-01`;
+                        const end = m === 12 ? `${viewYear}-12-31` : `${viewYear}-${nextMStr}-01`;
+                        const mStats = getRangeStats(item.chart, start, end);
+                        monthlyCells.push(`<td class="${m%3===0?'sep-m':''}">${ff(mStats.ytd)}</td>`);
+                    }
+
+                    const dot = above => `<span class="dot ${above?'dot-up':'dot-down'}"></span>`;
+                    const maCell = `<div style="display:flex; justify-content:center; gap:8px; padding:6px; background:rgba(0,0,0,0.15); border-radius:6px; border:1px solid rgba(255,255,255,0.05);">${dot(item.MA20)} ${dot(item.MA60)} ${dot(item.MA120)} ${dot(item.MA308)}</div>`;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="asset-name" onclick="openModal('${item.자산명}')">${item.자산명}</td>
+                        <td>${maCell}</td>
+                        <td class="col-year">${ff(stats.ytd)}</td>
+                        <td style="font-size: 0.75rem;">${ff(stats.high_off)}</td>
+                        <td style="font-size: 0.75rem;">${ff(stats.low_off)}</td>
+                        <td>${ff(m1)}</td><td>${ff(m2)}</td><td>${ff(m3)}</td><td class="sep-q">${ff(m4)}</td>
+                        ${monthlyCells.join('')}
+                        <td class="bg-week">${ff(item.W1)}</td><td class="bg-week">${ff(item.W2)}</td><td class="bg-week">${ff(item.W3)}</td><td class="bg-week">${ff(item.W4)}</td>
+                        <td style="font-weight:700">${item.현재가.toLocaleString()}</td>
+                    `;
+                    body.appendChild(tr);
+                });
+            };
+
+            populate(mData, 'mTableBody');
+            populate(iData, 'iTableBody');
+
+            // Render Summary
+            renderSummary(data[0], data.find(d => d.카테고리==="Indices"));
+            
+            // Render Heatmap
+            const heat = document.getElementById('heatmap');
+            heat.innerHTML = data.map(i => {
+                const val = parseFloat(i.YTD);
+                const opacity = Math.min(Math.max(Math.abs(val) / 20, 0.15), 0.9);
+                const color = val >= 0 ? `rgba(244, 63, 94, ${opacity})` : `rgba(34, 197, 94, ${opacity})`;
+                return `<div class="heat-cell" style="background:${color}" onclick="selectAnalysis('${i.자산명}')">${i.자산명}<br>${i.YTD}</div>`;
+            }).join('');
+
+            // Golden / Bear Logic
+            document.getElementById('topWinner').innerHTML = `
+                <div style="font-size:3.2rem; font-weight:900; color:gold; line-height:1;">${data[0].YTD}</div>
+                <div style="font-size:1rem; margin-top:0.5rem; color:#fff;">${data[0].자산명}</div>
+            `;
+            
+            const signalItem = (item, isUp) => `
+                <div style="background:rgba(255,255,255,0.03); padding:0.8rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.05);">
+                    <span style="font-weight:700; color:${isUp?'var(--up)':'var(--down)'}">${isUp?'🚀':'📉'} ${item.자산명}</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted)">YTD: ${item.YTD}</span>
+                </div>
+            `;
+
+            document.getElementById('goldenList').innerHTML = data.filter(i => i.MA20).slice(0,5).map(i => signalItem(i, true)).join('');
+            document.getElementById('bearList').innerHTML = data.filter(i => !i.MA308).slice(0,5).map(i => signalItem(i, false)).join('');
+
+            document.getElementById('lastSyncSide').innerText = "Last Sync: " + data[0].업데이트시간;
+            
+            // Auto-select first item for analysis
+            if(data.length > 0) selectAnalysis(data[0].자산명);
+        }
+
+        function selectAnalysis(name) {
+            const item = MARKET_STORE.find(d => d.자산명 === name);
+            if(!item || !item.analysis) return;
+
+            document.getElementById('deepInsight').style.display = "block";
+            document.getElementById('insightTitle').innerText = `${item.자산명} 프로페셔널 마켓 리포트`;
+            
+            const renderList = (arr) => {
+                if(!Array.isArray(arr)) return arr;
+                return arr.map((v, i) => `<div style="margin-bottom:8px; display:flex; gap:10px;">
+                    <span style="color:var(--text-muted); font-weight:700;">${i+1}.</span>
+                    <span>${v.replace(/^\d+\.\s*/, '')}</span>
+                </div>`).join('');
+            };
+
+            document.getElementById('insSupply').innerHTML = renderList(item.analysis.supply);
+            document.getElementById('insQuant').innerHTML = renderList(item.analysis.quant);
+            document.getElementById('insQual').innerHTML = renderList(item.analysis.qual);
+
+            const nList = document.getElementById('newsList');
+            nList.innerHTML = item.analysis.links.map(l => `
+                <a href="${l.u}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.08); padding:0.4rem 0.8rem; border-radius:20px; font-size:0.75rem; color:var(--text-main); border:1px solid rgba(255,255,255,0.1); transition:0.2s; display:flex; align-items:center; gap:5px;">
+                    <span>📰</span> ${l.t}
+                </a>
+            `).join('');
+        }
+
+        function renderSummary(best, bestIdx) {
+            const container = document.getElementById('topCards');
+            const arr = [ {l:'BEST PERFORMANCE', v:best}, {l:'BEST INDEX', v:bestIdx}, {l:'BTC-USD', v:MARKET_STORE.find(d => d.자산명.includes("비트코인"))} ];
+            container.innerHTML = arr.map(p => `
+                <div class="summary-card">
+                    <div style="font-size:0.7rem; color:var(--text-muted);">${p.l}</div>
+                    <div style="font-size:1.1rem; font-weight:700; margin:0.3rem 0;">${p.v.자산명}</div>
+                    <div style="font-size:1.4rem; font-weight:700;">${p.v.현재가.toLocaleString()}</div>
+                    <div style="font-size:0.8rem;" class="${parseFloat(p.v.YTD)>=0?'up':'down'}">YTD: ${p.v.YTD}</div>
+                </div>
+            `).join('');
+        }
+
+        function openModal(name) {
+            currentAsset = MARKET_STORE.find(d => d.자산명 === name);
+            if(!currentAsset) return;
+            document.getElementById('mName').innerText = currentAsset.자산명;
+            document.getElementById('mNews').innerText = currentAsset.news || "시황 정보를 분석 중입니다...";
+            document.getElementById('assetModal').style.display = "block";
+            updateRange(0); 
+        }
+
+        function updateRange(days) {
+            const fd = currentAsset.chart;
+            let d = fd.dates, p = fd.prices, m20 = fd.ma20, m60 = fd.ma60, m120 = fd.ma120, m308 = fd.ma308;
+            if(days > 0) {
+                d = d.slice(-days); p = p.slice(-days); m20 = m20.slice(-days); m60 = m60.slice(-days); m120 = m120.slice(-days); m308 = m308.slice(-days);
+            }
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if(myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: d,
+                    datasets: [
+                        { label: 'Price', data: p, borderColor: '#38bdf8', borderWidth: 2.2, pointRadius: 0, tension:0.1 },
+                        { label: 'MA20', data: m20, borderColor: '#fbbf24', borderWidth: 1, pointRadius: 0 },
+                        { label: 'MA60', data: m60, borderColor: '#f43f5e', borderWidth: 1, pointRadius: 0 },
+                        { label: 'MA120', data: m120, borderColor: '#a855f7', borderWidth: 1, pointRadius: 0 },
+                        { label: 'MA308', data: m308, borderColor: '#22c55e', borderWidth: 1, pointRadius: 0 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font:{size:10}} },
+                        x: { grid: { display:false }, ticks: { color: '#94a3b8', maxTicksLimit:12, font:{size:10}} }
+                    },
+                    plugins: {
+                        legend: { labels: { color:'#f8fafc', font:{size:11}} },
+                        zoom: { zoom: { wheel: { enabled: true }, mode: 'x' }, pan: { enabled: true, mode: 'x' } }
+                    }
+                }
+            });
+        }
+
+        function showMonthlyReport() {
+            if(typeof MARKET_STORE === 'undefined') return;
+            const container = document.getElementById('reportContainer');
+            container.innerHTML = "";
+            
+            const currentMonth = new Date().getMonth() + 1; // 1-12
+            const commodities = MARKET_STORE.filter(d => d.카테고리 === "Raw Materials");
+            const indices = MARKET_STORE.filter(d => d.카테고리 === "Indices");
+
+            for(let m=1; m<=currentMonth; m++) {
+                const getBest = (list) => {
+                    let best = null; let bestVal = -Infinity;
+                    list.forEach(i => {
+                        const mStr = m.toString().padStart(2, '0');
+                        const nextMStr = (m+1).toString().padStart(2, '0');
+                        const s = `2026-${mStr}-01`;
+                        const e = m === 12 ? `2026-12-31` : `2026-${nextMStr}-01`;
+                        const r = getRangeStats(i.chart, s, e).ytd;
+                        if(r > bestVal) { bestVal = r; best = { name: i.자산명, val: r }; }
+                    });
+                    return best;
+                };
+
+                const cBest = getBest(commodities);
+                const iBest = getBest(indices);
+
+                const card = document.createElement('div');
+                card.style = `background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:1.2rem; border-left:5px solid ${m%2===0?'var(--primary)':'var(--secondary)'};`;
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+                        <span style="font-size:1.1rem; font-weight:700;">📅 ${m}월 시장 요약 🔍</span>
+                        <span class="badge" style="background:rgba(255,255,255,0.1); color:#fff; font-size:0.65rem;">2026-0${m} RECORD</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem;">
+                        <div style="background:rgba(0,0,0,0.2); padding:0.8rem; border-radius:8px;">
+                            <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">💎 원자재 BEST</div>
+                            <div style="font-weight:700; color:var(--primary);">${cBest ? cBest.name : '-'}</div>
+                            <div style="font-size:0.9rem; font-weight:800;" class="${cBest && cBest.val>=0?'up':'down'}">${cBest ? (cBest.val>=0?'▲':'▼') + Math.abs(cBest.val).toFixed(2) + '%' : '0.00%'}</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.2); padding:0.8rem; border-radius:8px;">
+                            <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">📈 지수 BEST</div>
+                            <div style="font-weight:700; color:var(--secondary);">${iBest ? iBest.name : '-'}</div>
+                            <div style="font-size:0.9rem; font-weight:800;" class="${iBest && iBest.val>=0?'up':'down'}">${iBest ? (iBest.val>=0?'▲':'▼') + Math.abs(iBest.val).toFixed(2) + '%' : '0.00%'}</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+            document.getElementById('reportModal').style.display = "block";
+        }
+
+        function closeReport() { document.getElementById('reportModal').style.display = "none"; }
+
+        function closeModal() { document.getElementById('assetModal').style.display = "none"; }
+        function resetZoom() { if(myChart) myChart.resetZoom(); }
+        function exportExcel() {
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(MARKET_STORE.map(({chart, news, ...r}) => r));
+            XLSX.utils.book_append_sheet(wb, ws, "MARKET");
+            XLSX.writeFile(wb, "2026_Asset_Terminal_Report.xlsx");
+        }
+        
+        function showMonthlyReport() {
+            if(typeof MARKET_STORE === 'undefined') return;
+            switchReport(1);
+
+            // Report 1 Logic
+            const container = document.getElementById('reportContainer');
+            container.innerHTML = "";
+            const currentMonth = new Date().getMonth() + 1; 
+            const commodities = MARKET_STORE.filter(d => d.카테고리 === "Raw Materials");
+            const indices = MARKET_STORE.filter(d => d.카테고리 === "Indices");
+
+            for(let m=1; m<=currentMonth; m++) {
+                const getBest = (list) => {
+                    let best = null; let bestVal = -Infinity;
+                    list.forEach(i => {
+                        const mStr = m.toString().padStart(2, '0');
+                        const nextMStr = (m+1).toString().padStart(2, '0');
+                        const s = `2026-${mStr}-01`;
+                        const e = m === 12 ? `2026-12-31` : `2026-${nextMStr}-01`;
+                        const r = getRangeStats(i.chart, s, e).ytd;
+                        if(r > bestVal) { bestVal = r; best = { name: i.자산명, val: r }; }
+                    });
+                    return best;
+                };
+                const cBest = getBest(commodities);
+                const iBest = getBest(indices);
+
+                const allSorted = [...MARKET_STORE].map(item => {
+                    const mStr = m.toString().padStart(2, '0');
+                    const prevMStr = (m-1).toString().padStart(2, '0');
+                    const nextMStr = (m+1).toString().padStart(2, '0');
+                    const curS = `2026-${mStr}-01`;
+                    const curE = m === 12 ? `2026-12-31` : `2026-${nextMStr}-01`;
+                    const curVal = getRangeStats(item.chart, curS, curE).ytd;
+                    let prevVal = 0;
+                    if(m > 1) {
+                        const prevS = `2026-${prevMStr}-01`;
+                        const prevE = `2026-${mStr}-01`;
+                        prevVal = getRangeStats(item.chart, prevS, prevE).ytd;
+                    }
+                    return { name: item.자산명, cur: curVal, prev: prevVal, hasPrev: m > 1 };
+                }).sort((a,b) => b.cur - a.cur);
+
+                const card = document.createElement('div');
+                card.style = "background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:1.2rem; border-left:5px solid " + (m%2===0?'var(--primary)':'var(--secondary)');
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+                        <span style="font-size:1.1rem; font-weight:700;">📅 ${m}월 시장 요약 🔍</span>
+                        <span class="badge" style="background:rgba(255,255,255,0.1); color:#fff; font-size:0.65rem;">2026-0${m} RECORD</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
+                        <div style="background:rgba(0,0,0,0.2); padding:0.8rem; border-radius:8px;">
+                            <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">💎 원자재 BEST</div>
+                            <div style="font-weight:700; color:var(--primary);">${cBest ? cBest.name : '-'}</div>
+                            <div style="font-size:0.9rem; font-weight:800;" class="${cBest && cBest.val>=0?'up':'down'}">${cBest ? (cBest.val>=0?'▲':'▼') + Math.abs(cBest.val).toFixed(2) + '%' : '0.00%'}</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.2); padding:0.8rem; border-radius:8px;">
+                            <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">📈 지수 BEST</div>
+                            <div style="font-weight:700; color:var(--secondary);">${iBest ? iBest.name : '-'}</div>
+                            <div style="font-size:0.9rem; font-weight:800;" class="${iBest && iBest.val>=0?'up':'down'}">${iBest ? (iBest.val>=0?'▲':'▼') + Math.abs(iBest.val).toFixed(2) + '%' : '0.00%'}</div>
+                        </div>
+                    </div>
+                    <div class="report-details" style="background:rgba(0,0,0,0.1); border-radius:8px; padding:1rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:4px;">
+                            <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted);">📊 자산별 변동 비교 (전월 vs 당월)</span>
+                            <span style="font-size:0.65rem; color:var(--text-muted);">PREV / CUR</span>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:2.5rem; max-height:220px; overflow-y:auto; padding-right:10px;">
+                            <div style="display:flex; flex-direction:column;">${allSorted.slice(0, Math.ceil(allSorted.length/2)).map(it => `
+                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.03);">
+                                    <span style="color:#cbd5e1; flex-grow:1;">${it.name}</span>
+                                    <div style="display:flex; gap:10px; width:110px; justify-content:flex-end;">
+                                        <span class="${it.prev>=0?'up':'down'}" style="opacity:0.5; font-size:0.6rem;">${it.hasPrev ? (it.prev>=0?'+':'-')+Math.abs(it.prev).toFixed(1)+'%' : '--'}</span>
+                                        <span class="${it.cur>=0?'up':'down'}" style="font-weight:700;">${it.cur>=0?'▲':'▼'}${Math.abs(it.cur).toFixed(1)}%</span>
+                                    </div>
+                                </div>
+                            `).join('')}</div>
+                            <div style="display:flex; flex-direction:column;">${allSorted.slice(Math.ceil(allSorted.length/2)).map(it => `
+                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.03);">
+                                    <span style="color:#cbd5e1; flex-grow:1;">${it.name}</span>
+                                    <div style="display:flex; gap:10px; width:110px; justify-content:flex-end;">
+                                        <span class="${it.prev>=0?'up':'down'}" style="opacity:0.5; font-size:0.6rem;">${it.hasPrev ? (it.prev>=0?'+':'-')+Math.abs(it.prev).toFixed(1)+'%' : '--'}</span>
+                                        <span class="${it.cur>=0?'up':'down'}" style="font-weight:700;">${it.cur>=0?'▲':'▼'}${Math.abs(it.cur).toFixed(1)}%</span>
+                                    </div>
+                                </div>
+                            `).join('')}</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+
+            // Report 2 Logic (Matrix)
+            const matrixBody = document.getElementById('matrixBody');
+            matrixBody.innerHTML = "";
+            MARKET_STORE.sort((a,b) => parseFloat(b.YTD) - parseFloat(a.YTD)).forEach(item => {
+                const ytdVal = getRangeStats(item.chart, '2026-01-01', '2026-12-31').ytd;
+                const tr = document.createElement('tr');
+                let rowHtml = `
+                    <td style="position:sticky; left:0; z-index:11; background:#0c1425; font-weight:700; color:var(--primary); text-align:left; border-right:1px solid rgba(255,255,255,0.05);">${item.자산명}</td>
+                    <td style="position:sticky; left:170px; z-index:10; background:#1e293b; font-weight:800; color:var(--secondary); border-right:2px solid rgba(255,255,255,0.1);">${ff(ytdVal)}</td>
+                `;
+                for(let m=1; m<=12; m++) {
+                    const mStr = m.toString().padStart(2, '0');
+                    const nextMStr = (m+1).toString().padStart(2, '0');
+                    const s = `2026-${mStr}-01`;
+                    const e = m === 12 ? `2026-12-31` : `2026-${nextMStr}-01`;
+                    const r = getRangeStats(item.chart, s, e).ytd;
+                    const opacity = Math.min(Math.max(Math.abs(r) / 15, 0.05), 0.5);
+                    const color = r >= 0 ? `rgba(244, 63, 94, ${opacity})` : `rgba(34, 197, 94, ${opacity})`;
+                    rowHtml += `<td style="background:${color}; transition:0.2s;">${ff(r)}</td>`;
+                }
+                rowHtml += `<td style="font-weight:900; background:rgba(255,255,255,0.05);">${ff(ytdVal)}</td>`;
+                tr.innerHTML = rowHtml;
+                matrixBody.appendChild(tr);
+            });
+
+            document.getElementById('reportModal').style.display = "block";
+        }
+
+        function switchReport(num) {
+            document.querySelectorAll('.report-view').forEach(v => v.style.display = "none");
+            document.getElementById(`reportView${num}`).style.display = "block";
+            document.getElementById('btnRep1').classList.toggle('active', num===1);
+            document.getElementById('btnRep2').classList.toggle('active', num===2);
+        }
+        function closeReport() { document.getElementById('reportModal').style.display = "none"; }
+
+        // PWA reg
+        if('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js'); });
+        }
+        
+        render();
+    </script>
+
+    <!-- MONTHLY REPORT MODAL SERIES (Report 1 & 2) -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content" style="max-width: 1200px; width: 96%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h2 style="font-size: 1.4rem; color:var(--primary);">🗓️ 2026 월간 마켓 레포트 시리즈</h2>
+                <span style="font-size:2rem; cursor:pointer;" onclick="closeReport()">&times;</span>
+            </div>
+            
+            <!-- REPORT TABS -->
+            <div style="display:flex; gap:1rem; margin-bottom:1.5rem; border-bottom:1px solid var(--border); padding-bottom:10px;">
+                <button class="nav-link active" id="btnRep1" style="padding:0.5rem 1.2rem; font-size:0.85rem;" onclick="switchReport(1)">레포트 1 (월간 요약)</button>
+                <button class="nav-link" id="btnRep2" style="padding:0.5rem 1.2rem; font-size:0.85rem;" onclick="switchReport(2)">레포트 2 (자산별 월간 추이)</button>
+            </div>
+
+            <div id="reportView1" class="report-view">
+                <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.5rem;">자산별 월간 수익률 데이터를 바탕으로 자동 생성된 시장 분석 기록입니다.</p>
+                <div id="reportContainer" style="display:grid; grid-template-columns:1fr; gap:1.5rem;"></div>
+            </div>
+
+            <div id="reportView2" class="report-view" style="display:none;">
+                <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.5rem;">모든 자산의 1월~12월 월간 성과를 한눈에 비교하는 메트릭스 분석표입니다.</p>
+                <div class="table-wrap" style="max-height: 70vh;">
+                    <table class="data-table" id="matrixTable" style="min-width: 1550px; font-size: 0.75rem;">
+                        <thead>
+                            <tr class="th-group-main">
+                                <th style="position:sticky; left:0; z-index:11; background:#16213e; min-width:170px;">ASSET (자산명)</th>
+                                <th style="position:sticky; left:170px; z-index:10; background:#1e293b; color:var(--secondary); width:90px;">TOTAL (누계)</th>
+                                <th>1월</th><th>2월</th><th>3월</th><th>4월</th><th>5월</th><th>6월</th><th>7월</th><th>8월</th><th>9월</th><th>10월</th><th>11월</th><th>12월</th>
+                                <th style="background:#0f172a;">YTD</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrixBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

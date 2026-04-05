@@ -1,0 +1,21 @@
+{
+  "name": "2026 Asset Dashboard",
+  "short_name": "AssetHub",
+  "description": "2026 자산 종합 분석 대시보드 모바일 앱",
+  "start_url": "종합대시보드.html",
+  "display": "standalone",
+  "background_color": "#050a14",
+  "theme_color": "#38bdf8",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
