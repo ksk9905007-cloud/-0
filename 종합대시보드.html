@@ -112,11 +112,162 @@
         .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.2rem; margin-bottom: 2rem; }
         .summary-card { padding: 1.2rem; border-radius: 12px; background: linear-gradient(145deg, #0c1425, #1e293b); border-left: 4px solid var(--primary); }
 
+        /* =============================================
+           반응형: 태블릿 (601px ~ 900px)
+        ============================================= */
         @media (max-width: 900px) {
             aside { width: 70px; }
             .side-header h2, .nav-text { display: none; }
+            .summary-cards { grid-template-columns: repeat(2, 1fr); }
+            main { padding: 1.2rem; }
+            .analysis-box { grid-template-columns: 1fr; }
         }
+
+        /* =============================================
+           반응형: 모바일 (≤ 600px)
+           - 사이드바 → 하단 탭바로 전환
+           - 세로 스크롤 기반 레이아웃
+        ============================================= */
+        @media (max-width: 600px) {
+            body { flex-direction: column; height: 100dvh; }
+
+            /* 사이드바 → 하단 고정 탭바 */
+            aside {
+                width: 100% !important;
+                height: auto;
+                border-right: none;
+                border-top: 1px solid var(--border);
+                flex-direction: row;
+                padding: 0;
+                order: 999;
+                position: fixed;
+                bottom: 0; left: 0; right: 0;
+                z-index: 500;
+                background: rgba(8,16,31,0.97);
+                backdrop-filter: blur(12px);
+                justify-content: space-around;
+                align-items: center;
+                flex-shrink: 0;
+            }
+            .side-header { display: none; }
+            .nav-link {
+                flex-direction: column;
+                padding: 0.6rem 0.5rem 0.8rem;
+                gap: 0.2rem;
+                border-left: none !important;
+                border-top: 3px solid transparent;
+                flex: 1;
+                font-size: 0.62rem;
+                transform: none !important;
+            }
+            .nav-link.active {
+                border-top-color: var(--primary);
+                background: rgba(56, 189, 248, 0.08);
+            }
+            .nav-link:hover { transform: none !important; }
+            .nav-icon { font-size: 1.4rem; }
+            .nav-text { display: block !important; font-size: 0.6rem; }
+            #lastSyncSide { display: none; }
+
+            /* 메인 콘텐츠 */
+            main {
+                padding: 0.8rem 0.6rem;
+                padding-bottom: 80px; /* 하단 탭바 높이 여백 */
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* 헤더 */
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.8rem;
+                margin-bottom: 1rem;
+            }
+            header h1 { font-size: 1.15rem !important; }
+            header > div:last-child {
+                width: 100%;
+                display: grid !important;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 0.4rem;
+            }
+            header .btn {
+                padding: 0.5rem 0.3rem !important;
+                font-size: 0.68rem;
+                border-radius: 8px !important;
+                justify-content: center;
+            }
+
+            /* VIEW MODE 컨트롤 바 */
+            .card[style*="border: 1px solid var(--primary)"] > div {
+                flex-direction: column !important;
+                gap: 0.8rem !important;
+                padding: 0.8rem !important;
+            }
+            .range-btn { padding: 0.5rem 0.8rem !important; font-size: 0.68rem !important; }
+            #currentRangeInfo { font-size: 0.65rem !important; }
+
+            /* 요약 카드 */
+            .summary-cards { grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 1rem; }
+            .summary-card { padding: 0.8rem; border-radius: 10px; }
+            .summary-card .val { font-size: 1.1rem !important; }
+
+            /* 테이블 카드 → 모바일용 카드 리스트로 */
+            .data-table { display: none !important; }
+            .mobile-list { display: block !important; }
+            .card-header h2 { font-size: 0.85rem !important; }
+            .table-wrap { overflow-x: unset; }
+
+            /* 분석 탭 */
+            .heatmap-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0.6rem; }
+            .heat-cell { padding: 0.8rem 0.4rem; font-size: 0.7rem; }
+            .analysis-box { grid-template-columns: 1fr; gap: 1rem; }
+            #deepInsight > div:last-child { grid-template-columns: 1fr !important; }
+
+            /* 모달 */
+            .modal-content { margin: 0 !important; width: 100% !important; border-radius: 20px 20px 0 0 !important; max-height: 92dvh; position: fixed; bottom: 0; }
+            .chart-box { height: 260px !important; }
+        }
+
+        /* =============================================
+           모바일 카드 리스트 (테이블 대체)
+        ============================================= */
+        .mobile-list { display: none; padding: 0.5rem; }
+        .m-asset-card {
+            background: linear-gradient(145deg, rgba(14,22,40,0.9), rgba(12,20,37,0.95));
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1rem;
+            margin-bottom: 0.6rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .m-asset-card:active { border-color: var(--primary); box-shadow: 0 0 12px rgba(56,189,248,0.2); }
+        .m-asset-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.7rem; }
+        .m-asset-name { font-weight: 700; color: var(--primary); font-size: 0.95rem; }
+        .m-asset-price { font-size: 0.85rem; font-weight: 700; color: var(--text-main); }
+        .m-asset-ytd { font-size: 1rem; font-weight: 800; }
+        .m-asset-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.4rem;
+        }
+        .m-stat { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 0.4rem 0.3rem; text-align: center; }
+        .m-stat-label { font-size: 0.55rem; color: var(--text-muted); margin-bottom: 0.2rem; }
+        .m-stat-val { font-size: 0.72rem; font-weight: 700; }
+        .m-divider { height: 1px; background: var(--border); margin: 0.6rem 0; }
+        .m-week-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+        .m-week-cell { background: rgba(56,189,248,0.05); border-radius: 6px; padding: 0.35rem 0.2rem; text-align: center; }
+        .m-week-label { font-size: 0.52rem; color: var(--text-muted); }
+        .m-week-val { font-size: 0.72rem; font-weight: 700; margin-top: 0.1rem; }
+        .m-daily-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem; }
+        .m-daily-cell { background: rgba(16,185,129,0.06); border-radius: 6px; padding: 0.35rem 0.1rem; text-align: center; }
+        .m-daily-label { font-size: 0.5rem; color: var(--text-muted); }
+        .m-daily-val { font-size: 0.68rem; font-weight: 700; margin-top: 0.1rem; }
+        .m-ma-dots { display: flex; gap: 6px; align-items: center; margin-top: 0.5rem; }
+        .m-ma-item { font-size: 0.55rem; color: var(--text-muted); display: flex; align-items: center; gap: 3px; }
     </style>
+
 </head>
 <body>
 
@@ -255,13 +406,15 @@
                                     <tr class="th-sub">
                                         <th class="q-col" id="h_q1">Q1</th><th class="q-col" id="h_q2">Q2</th><th class="q-col" id="h_q3">Q3</th><th class="sep-q q-col" id="h_q4">Q4</th>
                                         <th class="m-col" id="h_m1">1월</th><th class="m-col" id="h_m2">2월</th><th class="m-col" id="h_m3">3월</th><th class="m-col" id="h_m4">4월</th><th class="m-col" id="h_m5">5월</th><th class="m-col" id="h_m6">6월</th><th class="m-col" id="h_m7">7월</th><th class="m-col" id="h_m8">8월</th><th class="m-col" id="h_m9">9월</th><th class="m-col" id="h_m10">10월</th><th class="m-col" id="h_m11">11월</th><th class="sep-m m-col" id="h_m12">12월</th>
-                                        <th class="bg-week w-col" id="h_w1">1주<br><small>(3/9-3/16)</small></th><th class="bg-week w-col" id="h_w2">2주<br><small>(3/16-3/23)</small></th><th class="bg-week w-col" id="h_w3">3주<br><small>(3/23-3/30)</small></th><th class="bg-week w-col" id="h_w4">4주<br><small>(3/30-4/5)</small></th>
+                                        <th class="bg-week w-col" id="h_w1">1주<br><small id="h_w1_range">--</small></th><th class="bg-week w-col" id="h_w2">2주<br><small id="h_w2_range">--</small></th><th class="bg-week w-col" id="h_w3">3주<br><small id="h_w3_range">--</small></th><th class="bg-week w-col" id="h_w4">4주<br><small id="h_w4_range">--</small></th>
                                         <th class="bg-daily d-col" style="display:none;" id="h_d5">5일전</th><th class="bg-daily d-col" style="display:none;" id="h_d4">4일전</th><th class="bg-daily d-col" style="display:none;" id="h_d3">3일전</th><th class="bg-daily d-col" style="display:none;" id="h_d2">전일</th><th class="bg-daily d-col" style="display:none;" id="h_d1">당일</th>
                                     </tr>
                                 </thead>
                                 <tbody id="mTableBody"></tbody>
                             </table>
                         </div>
+                        <!-- 모바일용 카드 리스트 -->
+                        <div class="mobile-list" id="mMobileList"></div>
                     </div>
 
                     <div class="card">
@@ -289,13 +442,15 @@
                                     <tr class="th-sub">
                                         <th class="i-q-col" id="ih_q1">Q1</th><th class="i-q-col" id="ih_q2">Q2</th><th class="i-q-col" id="ih_q3">Q3</th><th class="sep-q i-q-col" id="ih_q4">Q4</th>
                                         <th class="i-m-col" id="ih_m1">1월</th><th class="i-m-col" id="ih_m2">2월</th><th class="i-m-col" id="ih_m3">3월</th><th class="i-m-col" id="ih_m4">4월</th><th class="i-m-col" id="ih_m5">5월</th><th class="i-m-col" id="ih_m6">6월</th><th class="i-m-col" id="ih_m7">7월</th><th class="i-m-col" id="ih_m8">8월</th><th class="i-m-col" id="ih_m9">9월</th><th class="i-m-col" id="ih_m10">10월</th><th class="i-m-col" id="ih_m11">11월</th><th class="sep-m i-m-col" id="ih_m12">12월</th>
-                                        <th class="bg-week i-w-col" id="ih_w1">1주<br><small>(3/9-3/16)</small></th><th class="bg-week i-w-col" id="ih_w2">2주<br><small>(3/16-3/23)</small></th><th class="bg-week i-w-col" id="ih_w3">3주<br><small>(3/23-3/30)</small></th><th class="bg-week i-w-col" id="ih_w4">4주<br><small>(3/30-4/5)</small></th>
+                                        <th class="bg-week i-w-col" id="ih_w1">1주<br><small id="ih_w1_range">--</small></th><th class="bg-week i-w-col" id="ih_w2">2주<br><small id="ih_w2_range">--</small></th><th class="bg-week i-w-col" id="ih_w3">3주<br><small id="ih_w3_range">--</small></th><th class="bg-week i-w-col" id="ih_w4">4주<br><small id="ih_w4_range">--</small></th>
                                         <th class="bg-daily i-d-col" style="display:none;" id="ih_d5">5일전</th><th class="bg-daily i-d-col" style="display:none;" id="ih_d4">4일전</th><th class="bg-daily i-d-col" style="display:none;" id="ih_d3">3일전</th><th class="bg-daily i-d-col" style="display:none;" id="ih_d2">전일</th><th class="bg-daily i-d-col" style="display:none;" id="ih_d1">당일</th>
                                     </tr>
                                 </thead>
                                 <tbody id="iTableBody"></tbody>
                             </table>
                         </div>
+                        <!-- 모바일용 카드 리스트 -->
+                        <div class="mobile-list" id="iMobileList"></div>
                     </div>
                 </div>
             </section>
@@ -446,6 +601,94 @@
             render();
         }
 
+        /**
+         * 현재 월 기준으로 월요일 시작 실제 캘린더 주차 4개를 반환합니다.
+         * - 클램핑 없음: 주의 실제 Mon~Sun 전체를 반환 (이전 달/다음 달 날짜 포함 가능)
+         * - 주간 성과는 해당 주 직전 마지막 거래일 가격을 기준점으로 계산
+         */
+        function getWeekRangesForCurrentMonth() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth(); // 0-indexed
+            const pad = n => String(n).padStart(2, '0');
+            const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+            // 이번 달 1일 / 마지막 날
+            const firstDay = new Date(year, month, 1);
+            const lastDate = new Date(year, month + 1, 0);
+
+            // 1일이 속한 주의 월요일 찾기 (0=일, 1=월, ..., 6=토)
+            const dow = firstDay.getDay();
+            const daysToMon = dow === 0 ? -6 : 1 - dow;
+            const week1Mon = new Date(year, month, 1 + daysToMon);
+
+            const ranges = [];
+            for (let w = 0; w < 5; w++) {
+                const wMon = new Date(week1Mon.getTime());
+                wMon.setDate(week1Mon.getDate() + w * 7);
+                const wSun = new Date(wMon.getTime());
+                wSun.setDate(wMon.getDate() + 6);
+
+                // 이달 범위와 완전히 겹치지 않으면 skip
+                if (wSun < firstDay || wMon > lastDate) continue;
+
+                // 클램핑 없이 실제 Mon~Sun 주 전체 날짜 사용
+                ranges.push({ start: fmt(wMon), end: fmt(wSun) });
+                if (ranges.length === 4) break;
+            }
+            while (ranges.length < 4) {
+                ranges.push({ start: null, end: null });
+            }
+            return ranges;
+        }
+
+        /**
+         * 주간 실제 등락률: 해당 주 직전 마지막 거래일 종가 → 해당 주 마지막 거래일 종가
+         * (단순 주 내 수익률이 아닌, prior close 대비 weekly return)
+         */
+        function getWeeklyReturn(chart, weekStart, weekEnd) {
+            const today = new Date().toISOString().slice(0, 10);
+            const effectiveEnd = weekEnd > today ? today : weekEnd;
+
+            // 기준가: weekStart 직전 마지막 거래일
+            let baseIdx = -1;
+            for (let i = chart.dates.length - 1; i >= 0; i--) {
+                if (chart.dates[i] < weekStart) { baseIdx = i; break; }
+            }
+            // 종가: effectiveEnd 이하 마지막 거래일
+            let endIdx = -1;
+            for (let i = chart.dates.length - 1; i >= 0; i--) {
+                if (chart.dates[i] <= effectiveEnd) { endIdx = i; break; }
+            }
+            if (baseIdx === -1 || endIdx === -1 || endIdx <= baseIdx) return null;
+            return ((chart.prices[endIdx] - chart.prices[baseIdx]) / chart.prices[baseIdx]) * 100;
+        }
+
+        /**
+         * 주간 헤더 라벨 자동 업데이트 (날짜 문자열 직접 파싱 — 타임존 오류 방지)
+         */
+        function updateWeekHeaders() {
+            const ranges = getWeekRangesForCurrentMonth();
+            ranges.forEach((r, i) => {
+                const wNum = i + 1;
+                let label;
+                if (r.start && r.end) {
+                    // "YYYY-MM-DD" → M/D 형태로 직접 파싱 (UTC 오프셋 무관)
+                    const sp = r.start.split('-');
+                    const ep = r.end.split('-');
+                    const sm = parseInt(sp[1]), sd = parseInt(sp[2]);
+                    const em = parseInt(ep[1]), ed = parseInt(ep[2]);
+                    label = sm === em ? `${sm}/${sd}-${ed}` : `${sm}/${sd}-${em}/${ed}`;
+                } else {
+                    label = '-';
+                }
+                const el1 = document.getElementById(`h_w${wNum}_range`);
+                const el2 = document.getElementById(`ih_w${wNum}_range`);
+                if (el1) el1.textContent = label;
+                if (el2) el2.textContent = label;
+            });
+        }
+
         function getPriceAt(chart, targetDate) {
             const idx = chart.dates.findIndex(d => d >= targetDate);
             if(idx === -1) return chart.prices[chart.prices.length - 1];
@@ -525,81 +768,294 @@
             const iData = data.filter(d => d.카테고리 === "Indices");
 
             const populate = (items, targetId) => {
+
                 const body = document.getElementById(targetId);
+
                 body.innerHTML = "";
+
                 items.forEach(item => {
+
                     if(!item.chart) return;
+
                     const stats = getRangeStats(item.chart, startDate, endDate);
+
                     
+
                     // Quarterly Breakdown
+
                     const m1 = getRangeStats(item.chart, `${viewYear}-01-01`, `${viewYear}-03-31`).ytd;
+
                     const m2 = getRangeStats(item.chart, `${viewYear}-04-01`, `${viewYear}-06-30`).ytd;
+
                     const m3 = getRangeStats(item.chart, `${viewYear}-07-01`, `${viewYear}-09-30`).ytd;
+
                     const m4 = getRangeStats(item.chart, `${viewYear}-10-01`, `${viewYear}-12-31`).ytd;
 
+
+
                     // Monthly Breakdown (Full 12 months)
+
                     const monthlyCells = [];
+
                     for(let m=1; m<=12; m++) {
+
                         const mStr = m.toString().padStart(2, '0');
+
                         const nextMStr = (m+1).toString().padStart(2, '0');
+
                         const start = `${viewYear}-${mStr}-01`;
+
                         const end = m === 12 ? `${viewYear}-12-31` : `${viewYear}-${nextMStr}-01`;
+
                         const mStats = getRangeStats(item.chart, start, end);
+
                         monthlyCells.push(`<td class="${m%3===0?'sep-m':''} m-col" style="display:${viewMode==='daily'?'none':''};">${ff(mStats.ytd)}</td>`);
+
                     }
 
-                    // Daily Breakdown (Last 5 Days)
+
+
+                    // Daily Breakdown - 최신 5 영업일 (5일전 → 당일 오름차순)
+
                     const dailyCells = [];
+
                     const prices = item.chart.prices;
+
                     const dates = item.chart.dates;
-                    for(let i=1; i<=5; i++) {
-                        const currIdx = prices.length - i;
-                        const prevIdx = prices.length - i - 1;
+
+                    const totalLen = prices.length;
+
+
+
+                    // daySlots: i=5(5일전) → i=1(당일) 순서로 push → [5일전, 4일전, 3일전, 전일, 당일]
+
+                    const daySlots = [];
+
+                    for (let i = 5; i >= 1; i--) {
+
+                        const currIdx = totalLen - i;
+
+                        const prevIdx = totalLen - i - 1;
+
                         let dayChg = 0;
-                        let dateLabel = "";
-                        if(currIdx >= 0 && prevIdx >= 0) {
+
+                        let dateLabel = '--';
+
+                        if (currIdx >= 0 && prevIdx >= 0) {
                             dayChg = ((prices[currIdx] - prices[prevIdx]) / prices[prevIdx]) * 100;
-                            const dObj = new Date(dates[currIdx]);
-                            dateLabel = `${dObj.getMonth()+1}/${dObj.getDate()}`;
-                            
-                            // Update labels for the first item
-                            if(items.indexOf(item) === 0) {
-                                const hId = (targetId === 'mTableBody' ? 'h_d' : 'ih_d') + i;
-                                const hEl = document.getElementById(hId);
-                                if(hEl) hEl.innerHTML = `${dateLabel}<br><small>${i===1?'당일':i===2?'전일':i+'일전'}</small>`;
-                            }
+                            // 날짜 문자열 직접 파싱 (new Date() UTC 타임존 버그 방지)
+                            const dp = dates[currIdx].split('-');
+                            dateLabel = `${parseInt(dp[1])}/${parseInt(dp[2])}`;
                         }
-                        dailyCells.unshift(`<td class="d-col bg-daily" style="display:${viewMode==='daily'?'':'none'};">${ff(dayChg)}</td>`);
+
+                        daySlots.push({ slotNum: i, dayChg, dateLabel });
+
                     }
+
+
+
+                    // 헤더 업데이트 (첫 번째 자산 기준으로만 실행)
+
+                    if (items.indexOf(item) === 0) {
+
+                        daySlots.forEach(s => {
+
+                            const prefix = targetId === 'mTableBody' ? 'h_d' : 'ih_d';
+
+                            const hEl = document.getElementById(prefix + s.slotNum);
+
+                            if (hEl) {
+
+                                const lbl = s.slotNum === 1 ? '당일' : s.slotNum === 2 ? '전일' : s.slotNum + '일전';
+
+                                hEl.innerHTML = `${s.dateLabel}<br><small>${lbl}</small>`;
+
+                            }
+
+                        });
+
+                    }
+
+
+
+                    // 셀 생성 (오름차순: 5일전 → 당일)
+
+                    daySlots.forEach(s => {
+
+                        dailyCells.push(`<td class="d-col bg-daily" style="display:${viewMode==='daily'?'':'none'};">${ff(s.dayChg)}</td>`);
+
+                    });
+
+
+
+                    // Weekly Breakdown — prior close 대비 주간 등락률 (캘린더 주차)
+                    const weekRanges = getWeekRangesForCurrentMonth();
+                    const todayStr = new Date().toISOString().slice(0, 10);
+                    const weekCells = weekRanges.map((wr) => {
+                        if (!wr.start) {
+                            return `<td class="bg-week w-col" style="display:${viewMode==='daily'?'none':''}"><span>-</span></td>`;
+                        }
+                        if (wr.start > todayStr) {
+                            // 아직 시작하지 않은 주
+                            return `<td class="bg-week w-col" style="display:${viewMode==='daily'?'none':''}"><span>-</span></td>`;
+                        }
+                        const wVal = getWeeklyReturn(item.chart, wr.start, wr.end);
+                        const displayVal = wVal !== null ? ff(wVal) : '<span>-</span>';
+                        return `<td class="bg-week w-col" style="display:${viewMode==='daily'?'none':''}">${displayVal}</td>`;
+                    });
+
+
 
                     const dot = above => `<span class="dot ${above?'dot-up':'dot-down'}"></span>`;
+
                     const maCell = `<div style="display:flex; justify-content:center; gap:8px; padding:6px; background:rgba(0,0,0,0.15); border-radius:6px; border:1px solid rgba(255,255,255,0.05);">${dot(item.MA20)} ${dot(item.MA60)} ${dot(item.MA120)} ${dot(item.MA308)}</div>`;
 
+
+
                     const tr = document.createElement('tr');
+
                     tr.innerHTML = `
+
                         <td class="asset-name" onclick="openModal('${item.자산명}')">${item.자산명}</td>
+
                         <td>${maCell}</td>
+
                         <td class="col-year">${ff(stats.ytd)}</td>
+
                         <td style="font-size: 0.75rem;">${ff(stats.high_off)}</td>
+
                         <td style="font-size: 0.75rem;">${ff(stats.low_off)}</td>
+
                         <td class="q-col" style="display:${viewMode==='daily'?'none':''};">${ff(m1)}</td>
+
                         <td class="q-col" style="display:${viewMode==='daily'?'none':''};">${ff(m2)}</td>
+
                         <td class="q-col" style="display:${viewMode==='daily'?'none':''};">${ff(m3)}</td>
+
                         <td class="sep-q q-col" style="display:${viewMode==='daily'?'none':''};">${ff(m4)}</td>
+
                         ${monthlyCells.join('')}
-                        <td class="bg-week w-col" style="display:${viewMode==='daily'?'none':''};">${ff(item.W1)}</td>
-                        <td class="bg-week w-col" style="display:${viewMode==='daily'?'none':''};">${ff(item.W2)}</td>
-                        <td class="bg-week w-col" style="display:${viewMode==='daily'?'none':''};">${ff(item.W3)}</td>
-                        <td class="bg-week w-col" style="display:${viewMode==='daily'?'none':''};">${ff(item.W4)}</td>
+
+                        ${weekCells.join('')}
+
                         ${dailyCells.join('')}
+
                         <td style="font-weight:700">${item.현재가.toLocaleString()}</td>
+
                     `;
-                    body.appendChild(tr);
+
+                body.appendChild(tr);
+
                 });
+
             };
+
+            // =============================================
+            // 모바일 카드 리스트 렌더러
+            // =============================================
+            function populateMobile(items, mobileId) {
+                const container = document.getElementById(mobileId);
+                if (!container) return;
+                container.innerHTML = '';
+
+                const weekRanges = getWeekRangesForCurrentMonth();
+                const todayStr = new Date().toISOString().slice(0, 10);
+
+                items.forEach(item => {
+                    if (!item.chart) return;
+                    const stats = getRangeStats(item.chart, startDate, endDate);
+                    const prices = item.chart.prices;
+                    const dates2 = item.chart.dates;
+                    const totalLen2 = prices.length;
+
+                    // 월간 주요 (Q1~Q4)
+                    const q1v = getRangeStats(item.chart, `${viewYear}-01-01`, `${viewYear}-03-31`).ytd;
+                    const q2v = getRangeStats(item.chart, `${viewYear}-04-01`, `${viewYear}-06-30`).ytd;
+                    const q3v = getRangeStats(item.chart, `${viewYear}-07-01`, `${viewYear}-09-30`).ytd;
+                    const q4v = getRangeStats(item.chart, `${viewYear}-10-01`, `${viewYear}-12-31`).ytd;
+
+                    // 주간 카드
+                    const weekHTML = weekRanges.map((wr, wi) => {
+                        const label = wr.start ? (() => {
+                            const sp = wr.start.split('-'), ep = wr.end.split('-');
+                            const sm = parseInt(sp[1]), sd = parseInt(sp[2]);
+                            const em = parseInt(ep[1]), ed = parseInt(ep[2]);
+                            return sm === em ? `${sm}/${sd}-${ed}` : `${sm}/${sd}-${em}/${ed}`;
+                        })() : '-';
+                        let val = '<span style="color:var(--text-muted)">-</span>';
+                        if (wr.start && wr.start <= todayStr) {
+                            const wv = getWeeklyReturn(item.chart, wr.start, wr.end);
+                            if (wv !== null) val = ff(wv);
+                        }
+                        return `<div class="m-week-cell">
+                            <div class="m-week-label">${wi+1}주 ${label}</div>
+                            <div class="m-week-val">${val}</div>
+                        </div>`;
+                    }).join('');
+
+                    // 일별 카드
+                    const daySlots2 = [];
+                    for (let i = 5; i >= 1; i--) {
+                        const ci = totalLen2 - i, pi = totalLen2 - i - 1;
+                        let dc = 0, dl = '--';
+                        if (ci >= 0 && pi >= 0) {
+                            dc = ((prices[ci] - prices[pi]) / prices[pi]) * 100;
+                            const dp2 = dates2[ci].split('-');
+                            dl = `${parseInt(dp2[1])}/${parseInt(dp2[2])}`;
+                        }
+                        daySlots2.push({ slotNum: i, dayChg: dc, dateLabel: dl });
+                    }
+                    const dailyHTML = daySlots2.map(s => {
+                        const lbl = s.slotNum === 1 ? '당일' : s.slotNum === 2 ? '전일' : s.slotNum + '일전';
+                        return `<div class="m-daily-cell">
+                            <div class="m-daily-label">${lbl}<br>${s.dateLabel}</div>
+                            <div class="m-daily-val">${ff(s.dayChg)}</div>
+                        </div>`;
+                    }).join('');
+
+                    // MA 도트
+                    const maDot = (above, lbl) => `<span class="m-ma-item"><span class="dot ${above?'dot-up':'dot-down'}"></span>${lbl}</span>`;
+                    const maHTML = maDot(item.MA20,'20') + maDot(item.MA60,'60') + maDot(item.MA120,'120') + maDot(item.MA308,'308');
+
+                    const ytdVal = ff(stats.ytd);
+                    const card = document.createElement('div');
+                    card.className = 'm-asset-card';
+                    card.onclick = () => openModal(item.자산명);
+                    card.innerHTML = `
+                        <div class="m-asset-top">
+                            <span class="m-asset-name">${item.자산명}</span>
+                            <span class="m-asset-ytd">${ytdVal}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                            <span style="font-size:0.7rem; color:var(--text-muted);">현재가</span>
+                            <span class="m-asset-price">${item.현재가.toLocaleString()}</span>
+                        </div>
+                        <div class="m-divider"></div>
+                        <div class="m-asset-grid">
+                            <div class="m-stat"><div class="m-stat-label">Q1</div><div class="m-stat-val">${ff(q1v)}</div></div>
+                            <div class="m-stat"><div class="m-stat-label">Q2</div><div class="m-stat-val">${ff(q2v)}</div></div>
+                            <div class="m-stat"><div class="m-stat-label">고점대비</div><div class="m-stat-val">${ff(stats.high_off)}</div></div>
+                            <div class="m-stat"><div class="m-stat-label">저점대비</div><div class="m-stat-val">${ff(stats.low_off)}</div></div>
+                        </div>
+                        <div class="m-divider"></div>
+                        <div style="font-size:0.6rem; color:var(--text-muted); margin-bottom:0.4rem;">📅 주간 성과</div>
+                        <div class="m-week-row">${weekHTML}</div>
+                        <div class="m-divider"></div>
+                        <div style="font-size:0.6rem; color:var(--text-muted); margin-bottom:0.4rem;">📈 일별 성과</div>
+                        <div class="m-daily-row">${dailyHTML}</div>
+                        <div class="m-ma-dots">${maHTML}</div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+
+            // 주간 헤더 자동 업데이트 (현재 월 기준)
+            updateWeekHeaders();
 
             populate(mData, 'mTableBody');
             populate(iData, 'iTableBody');
+            populateMobile(mData, 'mMobileList');
+            populateMobile(iData, 'iMobileList');
 
             // Render Summary
             renderSummary(data[0], data.find(d => d.카테고리==="Indices"));
@@ -664,13 +1120,17 @@
 
         function renderSummary(best, bestIdx) {
             const container = document.getElementById('topCards');
-            const arr = [ {l:'BEST PERFORMANCE', v:best}, {l:'BEST INDEX', v:bestIdx}, {l:'BTC-USD', v:MARKET_STORE.find(d => d.자산명.includes("비트코인"))} ];
+            const arr = [
+                {l:'🏆 BEST PERFORMANCE', v:best},
+                {l:'📈 BEST INDEX', v:bestIdx},
+                {l:'₿ 비트코인 (BTC-USD)', v:MARKET_STORE.find(d => d.자산명.includes("비트코인"))}
+            ];
             container.innerHTML = arr.map(p => `
-                <div class="summary-card">
-                    <div style="font-size:0.7rem; color:var(--text-muted);">${p.l}</div>
-                    <div style="font-size:1.1rem; font-weight:700; margin:0.3rem 0;">${p.v.자산명}</div>
-                    <div style="font-size:1.4rem; font-weight:700;">${p.v.현재가.toLocaleString()}</div>
-                    <div style="font-size:0.8rem;" class="${parseFloat(p.v.YTD)>=0?'up':'down'}">YTD: ${p.v.YTD}</div>
+                <div class="summary-card" onclick="openModal('${p.v.자산명}')" style="cursor:pointer; transition:0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                    <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700; letter-spacing:0.5px;">${p.l}</div>
+                    <div style="font-size:1.15rem; font-weight:800; margin:0.4rem 0; color:var(--text-main);">${p.v.자산명}</div>
+                    <div class="val" style="font-size:1.6rem; font-weight:900; letter-spacing:-0.5px;">${p.v.현재가.toLocaleString()}</div>
+                    <div style="font-size:0.9rem; font-weight:700; margin-top:0.4rem;" class="${parseFloat(p.v.YTD)>=0?'up':'down'}">YTD: ${p.v.YTD}</div>
                 </div>
             `).join('');
         }

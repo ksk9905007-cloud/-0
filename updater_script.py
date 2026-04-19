@@ -37,9 +37,20 @@ def fetch_data():
     # 2026년 정밀 기준일 (수익률 계산용)
     D_2026 = "2026-01-01"
     D_JAN = "2026-01-01"; D_FEB = "2026-02-01"; D_MAR = "2026-03-01"; D_APR = "2026-04-01"
-    W1_S = "2026-03-09"; W2_S = "2026-03-16"; W3_S = "2026-03-23"; W4_S = "2026-03-30"
-    
     today = datetime.now().strftime("%Y-%m-%d")
+    
+    # 현재 월 기준으로 주간 기준일 자동 계산 (Mon~Sun 캘린더 주차)
+    from datetime import date, timedelta
+    import calendar as cal_mod
+    _today = date.today()
+    _year, _month = _today.year, _today.month
+    _first = date(_year, _month, 1)
+    _dow = _first.weekday()  # Python: 0=Mon
+    _week1_mon = _first - timedelta(days=_dow)
+    # 4개 주차 계산
+    def _wk(n): return (_week1_mon + timedelta(weeks=n)).strftime("%Y-%m-%d")
+    # W1시작=주1 월요일, W2=주2 월, W3=주3 월, W4=주4 월
+    W1_S = _wk(0); W2_S = _wk(1); W3_S = _wk(2); W4_S = _wk(3)
     all_tickers = []
     for category in assets.values():
         all_tickers.extend(list(category.values()))
@@ -79,7 +90,27 @@ def fetch_data():
                 chg_apr = ((current - p_apr_s) / p_apr_s) * 100
 
                 w1_p = get_p(W1_S); w2_p = get_p(W2_S); w3_p = get_p(W3_S); w4_p = get_p(W4_S)
-                c_w1 = ((w2_p - w1_p) / w1_p) * 100; c_w2 = ((w3_p - w2_p) / w2_p) * 100; c_w3 = ((w4_p - w3_p) / w3_p) * 100; c_w4 = ((current - w4_p) / w4_p) * 100
+                # 주간 등락률: 전주 종가 대비 주말 종가
+                def prior_close(week_mon_str):
+                    """week_mon_str 직전 마지막 거래일 종가"""
+                    target = pd.to_datetime(week_mon_str) - pd.Timedelta(days=1)
+                    idx = hist.index.asof(target)
+                    return float(hist.loc[idx]) if idx is not pd.NaT else float(hist.iloc[0])
+                # W1: Prior close (주1 월요일 직전) → W1 주 마지막 거래일
+                def week_end_close(week_mon_str, week_sun_str):
+                    eff = min(week_sun_str, today)
+                    idx = hist.index.asof(pd.to_datetime(eff))
+                    return float(hist.loc[idx]) if idx is not pd.NaT else float(hist.iloc[-1])
+                pc_w0 = prior_close(W1_S)
+                ec_w1 = week_end_close(W1_S, _wk(0)[:10])
+                ec_w2 = week_end_close(W2_S, (_week1_mon + timedelta(weeks=1, days=6)).strftime("%Y-%m-%d"))
+                ec_w3 = week_end_close(W3_S, (_week1_mon + timedelta(weeks=2, days=6)).strftime("%Y-%m-%d"))
+                ec_w4 = week_end_close(W4_S, (_week1_mon + timedelta(weeks=3, days=6)).strftime("%Y-%m-%d"))
+                pc_w1 = prior_close(W2_S); pc_w2 = prior_close(W3_S); pc_w3 = prior_close(W4_S)
+                c_w1 = ((ec_w1 - pc_w0) / pc_w0) * 100 if pc_w0 else 0
+                c_w2 = ((ec_w2 - pc_w1) / pc_w1) * 100 if pc_w1 else 0
+                c_w3 = ((ec_w3 - pc_w2) / pc_w2) * 100 if pc_w2 else 0
+                c_w4 = ((ec_w4 - pc_w3) / pc_w3) * 100 if pc_w3 else 0
 
                 # 장기 이평선 계산 (전체 히스토리)
                 ma20_h = hist.rolling(window=20).mean()
